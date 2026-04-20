@@ -1,0 +1,198 @@
+Enter password: *****
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 16
+Server version: 8.0.44 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> -- ==============================
+mysql> -- USE DATABASE
+mysql> -- ==============================
+mysql> USE EmpAppraisalDB;
+Database changed
+mysql>
+mysql> -- ==============================
+mysql> -- 1. CREATE RESULT TABLE (for cursor output)
+mysql> -- ==============================
+mysql>
+mysql> CREATE TABLE IF NOT EXISTS Employee_Bonus_Report (
+    ->     emp_id INT,
+    ->     emp_name VARCHAR(50),
+    ->     salary DECIMAL(10,2),
+    ->     rating INT,
+    ->     bonus DECIMAL(10,2)
+    -> );
+Query OK, 0 rows affected (0.02 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 2. CURSOR WITH CONTROL STRUCTURE + HANDLER
+mysql> -- Purpose: Calculate bonus based on rating and insert into report table
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE GenerateBonusReport()
+    -> BEGIN
+    ->     -- Variable declarations
+    ->     DECLARE v_emp_id INT;
+    ->     DECLARE v_emp_name VARCHAR(50);
+    ->     DECLARE v_salary DECIMAL(10,2);
+    ->     DECLARE v_rating INT;
+    ->     DECLARE v_bonus DECIMAL(10,2);
+    ->
+    ->     -- Cursor declaration
+    ->     DECLARE done INT DEFAULT 0;
+    ->
+    ->     DECLARE emp_cursor CURSOR FOR
+    ->         SELECT e.emp_id, e.emp_name, e.salary, a.rating
+    ->         FROM Employee e
+    ->         JOIN Appraisal a ON e.emp_id = a.emp_id;
+    ->
+    ->     -- Exception handler (when no more rows)
+    ->     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    ->
+    ->     -- Clear previous data
+    ->     DELETE FROM Employee_Bonus_Report;
+    ->
+    ->     OPEN emp_cursor;
+    ->
+    ->     read_loop: LOOP
+    ->         FETCH emp_cursor INTO v_emp_id, v_emp_name, v_salary, v_rating;
+    ->
+    ->         IF done = 1 THEN
+    ->             LEAVE read_loop;
+    ->         END IF;
+    ->
+    ->         -- CONTROL STRUCTURE (IF-ELSE for bonus calculation)
+    ->         IF v_rating = 5 THEN
+    ->             SET v_bonus = v_salary * 0.20;
+    ->         ELSEIF v_rating = 4 THEN
+    ->             SET v_bonus = v_salary * 0.15;
+    ->         ELSEIF v_rating = 3 THEN
+    ->             SET v_bonus = v_salary * 0.10;
+    ->         ELSE
+    ->             SET v_bonus = v_salary * 0.05;
+    ->         END IF;
+    ->
+    ->         -- Insert into result table
+    ->         INSERT INTO Employee_Bonus_Report
+    ->         VALUES (v_emp_id, v_emp_name, v_salary, v_rating, v_bonus);
+    ->
+    ->     END LOOP;
+    ->
+    ->     CLOSE emp_cursor;
+    ->
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 3. CALL PROCEDURE
+mysql> -- ==============================
+mysql>
+mysql> CALL GenerateBonusReport();
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 4. VIEW OUTPUT
+mysql> -- ==============================
+mysql>
+mysql> SELECT * FROM Employee_Bonus_Report;
++--------+-------------+----------+--------+----------+
+| emp_id | emp_name    | salary   | rating | bonus    |
++--------+-------------+----------+--------+----------+
+|      1 | Amit Sharma | 95000.00 |      4 | 14250.00 |
+|      2 | Priya Singh | 75000.00 |      5 | 15000.00 |
+|      3 | Rahul Verma | 55000.00 |      3 |  5500.00 |
+|      4 | Sneha Patil | 70000.00 |      4 | 10500.00 |
++--------+-------------+----------+--------+----------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 5. SECOND CURSOR EXAMPLE (ONLY HIGH PERFORMERS)
+mysql> -- ==============================
+mysql>
+mysql> CREATE TABLE IF NOT EXISTS High_Performers (
+    ->     emp_id INT,
+    ->     emp_name VARCHAR(50),
+    ->     rating INT
+    -> );
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE GetHighPerformers()
+    -> BEGIN
+    ->     DECLARE v_emp_id INT;
+    ->     DECLARE v_emp_name VARCHAR(50);
+    ->     DECLARE v_rating INT;
+    ->     DECLARE done INT DEFAULT 0;
+    ->
+    ->     DECLARE cur CURSOR FOR
+    ->         SELECT e.emp_id, e.emp_name, a.rating
+    ->         FROM Employee e
+    ->         JOIN Appraisal a ON e.emp_id = a.emp_id
+    ->         WHERE a.rating >= 4;
+    ->
+    ->     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    ->
+    ->     DELETE FROM High_Performers;
+    ->
+    ->     OPEN cur;
+    ->
+    ->     loop1: LOOP
+    ->         FETCH cur INTO v_emp_id, v_emp_name, v_rating;
+    ->
+    ->         IF done = 1 THEN
+    ->             LEAVE loop1;
+    ->         END IF;
+    ->
+    ->         INSERT INTO High_Performers
+    ->         VALUES (v_emp_id, v_emp_name, v_rating);
+    ->
+    ->     END LOOP;
+    ->
+    ->     CLOSE cur;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 6. CALL SECOND PROCEDURE
+mysql> -- ==============================
+mysql>
+mysql> CALL GetHighPerformers();
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 7. VIEW OUTPUT
+mysql> -- ==============================
+mysql>
+mysql> SELECT * FROM High_Performers;
++--------+-------------+--------+
+| emp_id | emp_name    | rating |
++--------+-------------+--------+
+|      1 | Amit Sharma |      4 |
+|      2 | Priya Singh |      5 |
+|      4 | Sneha Patil |      4 |
++--------+-------------+--------+
+3 rows in set (0.00 sec)
+
+mysql>
+
+
