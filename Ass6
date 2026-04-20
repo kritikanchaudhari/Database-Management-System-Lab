@@ -1,0 +1,262 @@
+Enter password: *****
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 14
+Server version: 8.0.44 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> -- ==============================
+mysql> -- USE DATABASE
+mysql> -- ==============================
+mysql> USE EmpAppraisalDB;
+Database changed
+mysql>
+mysql> -- ==============================
+mysql> -- OPTIONAL: CLEAN OLD TRIGGERS (SAFE FOR RE-RUN)
+mysql> -- ==============================
+mysql> DROP TRIGGER IF EXISTS trg_after_employee_insert;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> DROP TRIGGER IF EXISTS trg_after_salary_update;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> DROP TRIGGER IF EXISTS trg_before_employee_insert;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> DROP TRIGGER IF EXISTS trg_before_salary_update;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> DROP TRIGGER IF EXISTS trg_after_employee_delete;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- AUDIT TABLES
+mysql> -- ==============================
+mysql>
+mysql> CREATE TABLE IF NOT EXISTS Employee_Audit (
+    ->     audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    ->     emp_id INT,
+    ->     action VARCHAR(50),
+    ->     action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -> );
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+mysql>
+mysql> CREATE TABLE IF NOT EXISTS Salary_Audit (
+    ->     audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    ->     emp_id INT,
+    ->     old_salary DECIMAL(10,2),
+    ->     new_salary DECIMAL(10,2),
+    ->     action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -> );
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+mysql>
+mysql> CREATE TABLE IF NOT EXISTS Deleted_Employees (
+    ->     audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    ->     emp_id INT,
+    ->     emp_name VARCHAR(50),
+    ->     deleted_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -> );
+Query OK, 0 rows affected, 1 warning (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 1. BEFORE INSERT TRIGGER
+mysql> -- (Ensures minimum salary = 20000)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_before_employee_insert
+    -> BEFORE INSERT ON Employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     IF NEW.salary < 20000 THEN
+    ->         SET NEW.salary = 20000;
+    ->     END IF;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 2. AFTER INSERT TRIGGER
+mysql> -- (Logs new employee)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_after_employee_insert
+    -> AFTER INSERT ON Employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     INSERT INTO Employee_Audit(emp_id, action)
+    ->     VALUES (NEW.emp_id, 'Employee Inserted');
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 3. BEFORE UPDATE TRIGGER
+mysql> -- (Prevents salary reduction)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_before_salary_update
+    -> BEFORE UPDATE ON Employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     IF NEW.salary < OLD.salary THEN
+    ->         SET NEW.salary = OLD.salary;
+    ->     END IF;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 4. AFTER UPDATE TRIGGER
+mysql> -- (Logs salary changes)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_after_salary_update
+    -> AFTER UPDATE ON Employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     INSERT INTO Salary_Audit(emp_id, old_salary, new_salary)
+    ->     VALUES (OLD.emp_id, OLD.salary, NEW.salary);
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- 5. AFTER DELETE TRIGGER
+mysql> -- (Logs deleted employees)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE TRIGGER trg_after_employee_delete
+    -> AFTER DELETE ON Employee
+    -> FOR EACH ROW
+    -> BEGIN
+    ->     INSERT INTO Deleted_Employees(emp_id, emp_name)
+    ->     VALUES (OLD.emp_id, OLD.emp_name);
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- ==============================
+mysql> -- TESTING TRIGGERS (IMPORTANT FOR OUTPUT)
+mysql> -- ==============================
+mysql>
+mysql> -- 1. Insert employee (trigger will auto set salary >= 20000 if needed)
+mysql> INSERT INTO Employee
+    -> (emp_id, emp_name, department, designation, salary, email, age)
+    -> VALUES
+    -> (6, 'Test User', 'IT', 'Intern', 15000, 'test6@gmail.com', 22);
+Query OK, 1 row affected (0.00 sec)
+
+mysql>
+mysql> -- 2. Normal insert
+mysql> INSERT INTO Employee
+    -> (emp_id, emp_name, department, designation, salary, email, age)
+    -> VALUES
+    -> (7, 'Riya Shah', 'HR', 'Executive', 45000, 'riya@gmail.com', 25);
+ERROR 1062 (23000): Duplicate entry '7' for key 'employee.PRIMARY'
+mysql>
+mysql> -- 3. Update salary (trigger will prevent reduction + log change)
+mysql> UPDATE Employee
+    -> SET salary = 90000
+    -> WHERE emp_id = 1;
+Query OK, 0 rows affected (0.00 sec)
+Rows matched: 1  Changed: 0  Warnings: 0
+
+mysql>
+mysql> -- Try decreasing salary (will NOT change due to trigger)
+mysql> UPDATE Employee
+    -> SET salary = 30000
+    -> WHERE emp_id = 1;
+Query OK, 0 rows affected (0.00 sec)
+Rows matched: 1  Changed: 0  Warnings: 0
+
+mysql>
+mysql> -- 4. Delete employee (logs into Deleted_Employees)
+mysql> DELETE FROM Employee WHERE emp_id = 6;
+Query OK, 1 row affected (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- CHECK OUTPUT TABLES
+mysql> -- ==============================
+mysql>
+mysql> SELECT * FROM Employee;
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+| emp_id | emp_name    | department | designation | join_date  | salary   | email            | age  |
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+|      1 | Amit Sharma | IT         | Developer   | 2020-06-15 | 90000.00 | amit@gmail.com   |   28 |
+|      2 | Priya Singh | HR         | Manager     | 2018-03-10 | 75000.00 | priya@gmail.com  |   32 |
+|      3 | Rahul Verma | IT         | Tester      | 2021-01-20 | 50000.00 | rahul@gmail.com  |   26 |
+|      4 | Sneha Patil | Finance    | Analyst     | 2019-07-25 | 70000.00 | sneha@gmail.com  |   30 |
+|      5 | Vikram Rao  | IT         | Developer   | 2022-09-12 | 50000.00 | vikram@gmail.com |   25 |
+|      7 | Riya Shah   | HR         | Executive   | NULL       | 45000.00 | riya@gmail.com   |   25 |
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+6 rows in set (0.00 sec)
+
+mysql>
+mysql> SELECT * FROM Employee_Audit;
++----------+--------+-------------------+---------------------+
+| audit_id | emp_id | action            | action_time         |
++----------+--------+-------------------+---------------------+
+|        1 |      6 | Employee Inserted | 2026-03-25 12:03:56 |
+|        2 |      7 | Employee Inserted | 2026-03-25 12:03:56 |
+|        3 |      6 | Employee Inserted | 2026-03-25 12:06:04 |
++----------+--------+-------------------+---------------------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> SELECT * FROM Salary_Audit;
++----------+--------+------------+------------+---------------------+
+| audit_id | emp_id | old_salary | new_salary | action_time         |
++----------+--------+------------+------------+---------------------+
+|        1 |      1 |   60000.00 |   80000.00 | 2026-03-25 12:01:53 |
+|        2 |      1 |   80000.00 |   90000.00 | 2026-03-25 12:03:56 |
+|        3 |      1 |   90000.00 |   90000.00 | 2026-03-25 12:03:56 |
+|        4 |      1 |   90000.00 |   90000.00 | 2026-03-25 12:06:04 |
+|        5 |      1 |   90000.00 |   90000.00 | 2026-03-25 12:06:04 |
++----------+--------+------------+------------+---------------------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql> SELECT * FROM Deleted_Employees;
++----------+--------+-----------+---------------------+
+| audit_id | emp_id | emp_name  | deleted_time        |
++----------+--------+-----------+---------------------+
+|        1 |      6 | Test User | 2026-03-25 12:03:56 |
+|        2 |      6 | Test User | 2026-03-25 12:06:04 |
++----------+--------+-----------+---------------------+
+2 rows in set (0.00 sec)
+
+mysql>
+
+
+
