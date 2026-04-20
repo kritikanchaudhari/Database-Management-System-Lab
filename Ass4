@@ -1,0 +1,234 @@
+Enter password: *****
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 15
+Server version: 8.0.44 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> -- ==============================
+mysql> -- USE DATABASE
+mysql> -- ==============================
+mysql> USE EmpAppraisalDB;
+Database changed
+mysql>
+mysql> -- ==============================
+mysql> -- 1. STORED PROCEDURE
+mysql> -- (Get employee details by ID)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE GetEmployeeById(IN empInput INT)
+    -> BEGIN
+    ->     SELECT emp_id, emp_name, department, designation, salary
+    ->     FROM Employee
+    ->     WHERE emp_id = empInput;
+    -> END //
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- CALL PROCEDURE
+mysql> CALL GetEmployeeById(1);
++--------+-------------+------------+-------------+----------+
+| emp_id | emp_name    | department | designation | salary   |
++--------+-------------+------------+-------------+----------+
+|      1 | Amit Sharma | IT         | Developer   | 90000.00 |
++--------+-------------+------------+-------------+----------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 2. STORED PROCEDURE
+mysql> -- (Increase salary by department)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE IncreaseSalaryByDept(IN deptName VARCHAR(30), IN increment DECIMAL(10,2))
+    -> BEGIN
+    ->     UPDATE Employee
+    ->     SET salary = salary + increment
+    ->     WHERE department = deptName;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- CALL PROCEDURE
+mysql> CALL IncreaseSalaryByDept('IT', 5000);
+Query OK, 3 rows affected (0.00 sec)
+
+mysql>
+mysql> -- CHECK RESULT
+mysql> SELECT * FROM Employee;
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+| emp_id | emp_name    | department | designation | join_date  | salary   | email            | age  |
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+|      1 | Amit Sharma | IT         | Developer   | 2020-06-15 | 95000.00 | amit@gmail.com   |   28 |
+|      2 | Priya Singh | HR         | Manager     | 2018-03-10 | 75000.00 | priya@gmail.com  |   32 |
+|      3 | Rahul Verma | IT         | Tester      | 2021-01-20 | 55000.00 | rahul@gmail.com  |   26 |
+|      4 | Sneha Patil | Finance    | Analyst     | 2019-07-25 | 70000.00 | sneha@gmail.com  |   30 |
+|      5 | Vikram Rao  | IT         | Developer   | 2022-09-12 | 55000.00 | vikram@gmail.com |   25 |
+|      7 | Riya Shah   | HR         | Executive   | NULL       | 45000.00 | riya@gmail.com   |   25 |
++--------+-------------+------------+-------------+------------+----------+------------------+------+
+6 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 3. STORED PROCEDURE
+mysql> -- (Get employees with high rating)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE GetHighRatedEmployees()
+    -> BEGIN
+    ->     SELECT e.emp_name, a.rating, a.bonus
+    ->     FROM Employee e
+    ->     JOIN Appraisal a ON e.emp_id = a.emp_id
+    ->     WHERE a.rating >= 4;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- CALL PROCEDURE
+mysql> CALL GetHighRatedEmployees();
++-------------+--------+----------+
+| emp_name    | rating | bonus    |
++-------------+--------+----------+
+| Amit Sharma |      4 |  5000.00 |
+| Priya Singh |      5 | 10000.00 |
+| Sneha Patil |      4 |  6000.00 |
++-------------+--------+----------+
+3 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 4. FUNCTION
+mysql> -- (Calculate annual salary)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE FUNCTION GetAnnualSalary(monthly_salary DECIMAL(10,2))
+    -> RETURNS DECIMAL(10,2)
+    -> DETERMINISTIC
+    -> BEGIN
+    ->     RETURN monthly_salary * 12;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- USING FUNCTION
+mysql> SELECT emp_name, salary, GetAnnualSalary(salary) AS annual_salary
+    -> FROM Employee;
++-------------+----------+---------------+
+| emp_name    | salary   | annual_salary |
++-------------+----------+---------------+
+| Amit Sharma | 95000.00 |    1140000.00 |
+| Priya Singh | 75000.00 |     900000.00 |
+| Rahul Verma | 55000.00 |     660000.00 |
+| Sneha Patil | 70000.00 |     840000.00 |
+| Vikram Rao  | 55000.00 |     660000.00 |
+| Riya Shah   | 45000.00 |     540000.00 |
++-------------+----------+---------------+
+6 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 5. FUNCTION
+mysql> -- (Calculate bonus percentage)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE FUNCTION CalculateBonus(salary DECIMAL(10,2), rating INT)
+    -> RETURNS DECIMAL(10,2)
+    -> DETERMINISTIC
+    -> BEGIN
+    ->     DECLARE bonus DECIMAL(10,2);
+    ->
+    ->     IF rating = 5 THEN
+    ->         SET bonus = salary * 0.20;
+    ->     ELSEIF rating = 4 THEN
+    ->         SET bonus = salary * 0.15;
+    ->     ELSEIF rating = 3 THEN
+    ->         SET bonus = salary * 0.10;
+    ->     ELSE
+    ->         SET bonus = salary * 0.05;
+    ->     END IF;
+    ->
+    ->     RETURN bonus;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- USING FUNCTION
+mysql> SELECT e.emp_name, e.salary, a.rating,
+    ->        CalculateBonus(e.salary, a.rating) AS calculated_bonus
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id;
++-------------+----------+--------+------------------+
+| emp_name    | salary   | rating | calculated_bonus |
++-------------+----------+--------+------------------+
+| Amit Sharma | 95000.00 |      4 |         14250.00 |
+| Priya Singh | 75000.00 |      5 |         15000.00 |
+| Rahul Verma | 55000.00 |      3 |          5500.00 |
+| Sneha Patil | 70000.00 |      4 |         10500.00 |
++-------------+----------+--------+------------------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- 6. PROCEDURE WITH OUTPUT STYLE
+mysql> -- (Department wise employee count)
+mysql> -- ==============================
+mysql>
+mysql> DELIMITER //
+mysql>
+mysql> CREATE PROCEDURE GetDeptWiseCount()
+    -> BEGIN
+    ->     SELECT department, COUNT(*) AS total_employees
+    ->     FROM Employee
+    ->     GROUP BY department;
+    -> END //
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> DELIMITER ;
+mysql>
+mysql> -- CALL PROCEDURE
+mysql> CALL GetDeptWiseCount();
++------------+-----------------+
+| department | total_employees |
++------------+-----------------+
+| IT         |               3 |
+| HR         |               2 |
+| Finance    |               1 |
++------------+-----------------+
+3 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>
+
+
