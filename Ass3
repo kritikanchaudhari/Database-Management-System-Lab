@@ -1,0 +1,362 @@
+Enter password: *****
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 13
+Server version: 8.0.44 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> -- ==============================
+mysql> -- USE EXISTING DATABASE
+mysql> -- ==============================
+mysql> USE EmpAppraisalDB;
+Database changed
+mysql>
+mysql> -- ==============================
+mysql> -- A) JOINS (10+ QUERIES)
+mysql> -- ==============================
+mysql>
+mysql> -- 1. INNER JOIN (Employee + Appraisal)
+mysql> SELECT e.emp_name, e.department, a.rating, a.bonus
+    -> FROM Employee e
+    -> INNER JOIN Appraisal a ON e.emp_id = a.emp_id;
++-------------+------------+--------+----------+
+| emp_name    | department | rating | bonus    |
++-------------+------------+--------+----------+
+| Amit Sharma | IT         |      4 |  5000.00 |
+| Priya Singh | HR         |      5 | 10000.00 |
+| Rahul Verma | IT         |      3 |  2000.00 |
+| Sneha Patil | Finance    |      4 |  6000.00 |
++-------------+------------+--------+----------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 2. LEFT JOIN
+mysql> SELECT e.emp_name, a.rating, a.bonus
+    -> FROM Employee e
+    -> LEFT JOIN Appraisal a ON e.emp_id = a.emp_id;
++-------------+--------+----------+
+| emp_name    | rating | bonus    |
++-------------+--------+----------+
+| Amit Sharma |      4 |  5000.00 |
+| Priya Singh |      5 | 10000.00 |
+| Rahul Verma |      3 |  2000.00 |
+| Sneha Patil |      4 |  6000.00 |
+| Vikram Rao  |   NULL |     NULL |
++-------------+--------+----------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 3. RIGHT JOIN
+mysql> SELECT e.emp_name, a.rating, a.bonus
+    -> FROM Employee e
+    -> RIGHT JOIN Appraisal a ON e.emp_id = a.emp_id;
++-------------+--------+----------+
+| emp_name    | rating | bonus    |
++-------------+--------+----------+
+| Amit Sharma |      4 |  5000.00 |
+| Priya Singh |      5 | 10000.00 |
+| Rahul Verma |      3 |  2000.00 |
+| Sneha Patil |      4 |  6000.00 |
++-------------+--------+----------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 4. FULL OUTER JOIN (MySQL using UNION)
+mysql> SELECT e.emp_name, a.rating
+    -> FROM Employee e
+    -> LEFT JOIN Appraisal a ON e.emp_id = a.emp_id
+    -> UNION
+    -> SELECT e.emp_name, a.rating
+    -> FROM Employee e
+    -> RIGHT JOIN Appraisal a ON e.emp_id = a.emp_id;
++-------------+--------+
+| emp_name    | rating |
++-------------+--------+
+| Amit Sharma |      4 |
+| Priya Singh |      5 |
+| Rahul Verma |      3 |
+| Sneha Patil |      4 |
+| Vikram Rao  |   NULL |
++-------------+--------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 5. CROSS JOIN (Employee × Department)
+mysql> SELECT e.emp_name, d.dept_name
+    -> FROM Employee e
+    -> CROSS JOIN Department d;
++-------------+-----------+
+| emp_name    | dept_name |
++-------------+-----------+
+| Amit Sharma | IT        |
+| Amit Sharma | HR        |
+| Amit Sharma | Finance   |
+| Priya Singh | IT        |
+| Priya Singh | HR        |
+| Priya Singh | Finance   |
+| Rahul Verma | IT        |
+| Rahul Verma | HR        |
+| Rahul Verma | Finance   |
+| Sneha Patil | IT        |
+| Sneha Patil | HR        |
+| Sneha Patil | Finance   |
+| Vikram Rao  | IT        |
+| Vikram Rao  | HR        |
+| Vikram Rao  | Finance   |
++-------------+-----------+
+15 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 6. Employee with department matching condition
+mysql> SELECT e.emp_name, e.department, d.location
+    -> FROM Employee e
+    -> JOIN Department d ON e.department = d.dept_name;
++-------------+------------+----------+
+| emp_name    | department | location |
++-------------+------------+----------+
+| Amit Sharma | IT         | Mumbai   |
+| Priya Singh | HR         | Pune     |
+| Rahul Verma | IT         | Mumbai   |
+| Sneha Patil | Finance    | Delhi    |
+| Vikram Rao  | IT         | Mumbai   |
++-------------+------------+----------+
+5 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 7. Employees with rating 5
+mysql> SELECT e.emp_name, a.rating
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id
+    -> WHERE a.rating = 5;
++-------------+--------+
+| emp_name    | rating |
++-------------+--------+
+| Priya Singh |      5 |
++-------------+--------+
+1 row in set (0.00 sec)
+
+mysql>
+mysql> -- 8. Employees with bonus > 5000
+mysql> SELECT e.emp_name, a.bonus
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id
+    -> WHERE a.bonus > 5000;
++-------------+----------+
+| emp_name    | bonus    |
++-------------+----------+
+| Priya Singh | 10000.00 |
+| Sneha Patil |  6000.00 |
++-------------+----------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 9. IT department employees with appraisal
+mysql> SELECT e.emp_name, a.rating
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id
+    -> WHERE e.department = 'IT';
++-------------+--------+
+| emp_name    | rating |
++-------------+--------+
+| Amit Sharma |      4 |
+| Rahul Verma |      3 |
++-------------+--------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 10. Employees with salary > 60000 and appraisal join
+mysql> SELECT e.emp_name, e.salary, a.rating
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id
+    -> WHERE e.salary > 60000;
++-------------+----------+--------+
+| emp_name    | salary   | rating |
++-------------+----------+--------+
+| Priya Singh | 75000.00 |      5 |
+| Sneha Patil | 70000.00 |      4 |
++-------------+----------+--------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- B) SUBQUERIES (5+ QUERIES)
+mysql> -- ==============================
+mysql>
+mysql> -- 11. Employees earning above average salary
+mysql> SELECT emp_name, salary
+    -> FROM Employee
+    -> WHERE salary > (SELECT AVG(salary) FROM Employee);
++-------------+----------+
+| emp_name    | salary   |
++-------------+----------+
+| Priya Singh | 75000.00 |
+| Sneha Patil | 70000.00 |
++-------------+----------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 12. Employee with maximum salary
+mysql> SELECT emp_name, salary
+    -> FROM Employee
+    -> WHERE salary = (SELECT MAX(salary) FROM Employee);
++-------------+----------+
+| emp_name    | salary   |
++-------------+----------+
+| Priya Singh | 75000.00 |
++-------------+----------+
+1 row in set (0.00 sec)
+
+mysql>
+mysql> -- 13. Employees with rating >= 4
+mysql> SELECT emp_name
+    -> FROM Employee
+    -> WHERE emp_id IN (
+    ->     SELECT emp_id FROM Appraisal WHERE rating >= 4
+    -> );
++-------------+
+| emp_name    |
++-------------+
+| Amit Sharma |
+| Priya Singh |
+| Sneha Patil |
++-------------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 14. Employees who got bonus > average bonus
+mysql> SELECT emp_name
+    -> FROM Employee
+    -> WHERE emp_id IN (
+    ->     SELECT emp_id FROM Appraisal
+    ->     WHERE bonus > (SELECT AVG(bonus) FROM Appraisal)
+    -> );
++-------------+
+| emp_name    |
++-------------+
+| Priya Singh |
+| Sneha Patil |
++-------------+
+2 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 15. Employees who exist in appraisal table
+mysql> SELECT emp_name
+    -> FROM Employee
+    -> WHERE emp_id IN (SELECT emp_id FROM Appraisal);
++-------------+
+| emp_name    |
++-------------+
+| Amit Sharma |
+| Priya Singh |
+| Rahul Verma |
+| Sneha Patil |
++-------------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- C) VIEW
+mysql> -- ==============================
+mysql>
+mysql> -- Create View
+mysql> CREATE VIEW EmployeeAppraisalView AS
+    -> SELECT e.emp_name, e.department, e.salary, a.rating, a.bonus
+    -> FROM Employee e
+    -> JOIN Appraisal a ON e.emp_id = a.emp_id;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>
+mysql> -- Fetch from View
+mysql> SELECT * FROM EmployeeAppraisalView;
++-------------+------------+----------+--------+----------+
+| emp_name    | department | salary   | rating | bonus    |
++-------------+------------+----------+--------+----------+
+| Amit Sharma | IT         | 60000.00 |      4 |  5000.00 |
+| Priya Singh | HR         | 75000.00 |      5 | 10000.00 |
+| Rahul Verma | IT         | 50000.00 |      3 |  2000.00 |
+| Sneha Patil | Finance    | 70000.00 |      4 |  6000.00 |
++-------------+------------+----------+--------+----------+
+4 rows in set (0.00 sec)
+
+mysql>
+mysql> -- ==============================
+mysql> -- D) GROUP BY + HAVING
+mysql> -- ==============================
+mysql>
+mysql> -- 16. Count employees per department
+mysql> SELECT department, COUNT(*) AS total_employees
+    -> FROM Employee
+    -> GROUP BY department;
++------------+-----------------+
+| department | total_employees |
++------------+-----------------+
+| IT         |               3 |
+| HR         |               1 |
+| Finance    |               1 |
++------------+-----------------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 17. Average salary per department
+mysql> SELECT department, AVG(salary) AS avg_salary
+    -> FROM Employee
+    -> GROUP BY department;
++------------+--------------+
+| department | avg_salary   |
++------------+--------------+
+| IT         | 53333.333333 |
+| HR         | 75000.000000 |
+| Finance    | 70000.000000 |
++------------+--------------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 18. Departments having more than 1 employee
+mysql> SELECT department, COUNT(*) AS total_employees
+    -> FROM Employee
+    -> GROUP BY department
+    -> HAVING COUNT(*) > 1;
++------------+-----------------+
+| department | total_employees |
++------------+-----------------+
+| IT         |               3 |
++------------+-----------------+
+1 row in set (0.00 sec)
+
+mysql>
+mysql> -- 19. Total bonus per rating
+mysql> SELECT rating, SUM(bonus) AS total_bonus
+    -> FROM Appraisal
+    -> GROUP BY rating;
++--------+-------------+
+| rating | total_bonus |
++--------+-------------+
+|      4 |    11000.00 |
+|      5 |    10000.00 |
+|      3 |     2000.00 |
++--------+-------------+
+3 rows in set (0.00 sec)
+
+mysql>
+mysql> -- 20. Departments with avg salary > 60000
+mysql> SELECT department, AVG(salary) AS avg_salary
+    -> FROM Employee
+    -> GROUP BY department
+    -> HAVING AVG(salary) > 60000;
++------------+--------------+
+| department | avg_salary   |
++------------+--------------+
+| HR         | 75000.000000 |
+| Finance    | 70000.000000 |
++------------+--------------+
+2 rows in set (0.01 sec)
+
+mysql>
+
+
