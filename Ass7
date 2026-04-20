@@ -1,0 +1,225 @@
+test> use empAppraisal
+switched to db empAppraisal
+empAppraisal> db.emp.insertMany([
+| { Id: 1, Name: "ABC", Salary: 10000, Rating: 5, status: "active" },
+| { Id: 2, Name: "XYZ", Salary: 15000, Rating: 4, status: "active" },
+| { Id: 3, Name: "John", Salary: 20000, Rating: 3, status: "active" },
+| { Id: 4, Name: "Riya", Salary: 18000, Rating: 2, status: "inactive" }
+| ])
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId('69dde2bd31985b799a3682d1'),
+    '1': ObjectId('69dde2bd31985b799a3682d2'),
+    '2': ObjectId('69dde2bd31985b799a3682d3'),
+    '3': ObjectId('69dde2bd31985b799a3682d4')
+  }
+}
+empAppraisal> db.emp.find({ status: "active" })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 10000,
+    Rating: 5,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d2'),
+    Id: 2,
+    Name: 'XYZ',
+    Salary: 15000,
+    Rating: 4,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d3'),
+    Id: 3,
+    Name: 'John',
+    Salary: 20000,
+    Rating: 3,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.findOne({ Name: "ABC" })
+{
+  _id: ObjectId('69dde2bd31985b799a3682d1'),
+  Id: 1,
+  Name: 'ABC',
+  Salary: 10000,
+  Rating: 5,
+  status: 'active'
+}
+empAppraisal> db.emp.find({ Rating: 5, status: "active" })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 10000,
+    Rating: 5,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.find({
+|   $or: [
+|     { Rating: 5 },
+|     { Salary: { $gt: 18000 } }
+|   ]
+| })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 10000,
+    Rating: 5,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d3'),
+    Id: 3,
+    Name: 'John',
+    Salary: 20000,
+    Rating: 3,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.find({ status: { $ne: "inactive" } })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 10000,
+    Rating: 5,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d2'),
+    Id: 2,
+    Name: 'XYZ',
+    Salary: 15000,
+    Rating: 4,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d3'),
+    Id: 3,
+    Name: 'John',
+    Salary: 20000,
+    Rating: 3,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.find({ Salary: { $gt: 15000 } })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d3'),
+    Id: 3,
+    Name: 'John',
+    Salary: 20000,
+    Rating: 3,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d4'),
+    Id: 4,
+    Name: 'Riya',
+    Salary: 18000,
+    Rating: 2,
+    status: 'inactive'
+  }
+]
+empAppraisal> db.emp.updateOne(
+|   { Rating: 5 },
+|   { $set: { Salary: 20000 } }
+| )
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}
+empAppraisal> db.emp.updateMany(
+|   { Rating: { $gte: 4 } },
+|   { $inc: { Salary: 5000 } }
+| )
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 2,
+  modifiedCount: 2,
+  upsertedCount: 0
+}
+empAppraisal> db.emp.deleteOne({ Id: 4 })
+{ acknowledged: true, deletedCount: 1 }
+empAppraisal> db.emp.find().sort({ Salary: -1 })
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 25000,
+    Rating: 5,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d2'),
+    Id: 2,
+    Name: 'XYZ',
+    Salary: 20000,
+    Rating: 4,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d3'),
+    Id: 3,
+    Name: 'John',
+    Salary: 20000,
+    Rating: 3,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.find().limit(2)
+[
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d1'),
+    Id: 1,
+    Name: 'ABC',
+    Salary: 25000,
+    Rating: 5,
+    status: 'active'
+  },
+  {
+    _id: ObjectId('69dde2bd31985b799a3682d2'),
+    Id: 2,
+    Name: 'XYZ',
+    Salary: 20000,
+    Rating: 4,
+    status: 'active'
+  }
+]
+empAppraisal> db.emp.save({
+|   Id: 5,
+|   Name: "Aman",
+|   Salary: 25000,
+|   Rating: 4,
+|   status: "active"
+| })
+TypeError: db.emp.save is not a function
+empAppraisal> db.emp.aggregate([
+|   {
+|     $group: {
+|       _id: null,
+|       totalSalary: { $sum: "$Salary" }
+|     }
+|   }
+| ])
+[ { _id: null, totalSalary: 65000 } ]
+empAppraisal>
+
+
+
